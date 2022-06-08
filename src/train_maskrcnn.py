@@ -1,5 +1,4 @@
 from pathlib import Path
-from matplotlib.image import pil_to_array
 import torch
 import transforms as T
 from torchvision.ops import misc as misc_nn_ops
@@ -98,6 +97,8 @@ if __name__ == "__main__":
     root = Path(__file__).parent.absolute().parent
     coco_path = root / "data/coco"
     output_dir = root / "data/output"
+    if not output_dir.exists():
+        utils.mkdir(output_dir)
     train = Train_MaskRCNN(coco_path=coco_path)
     train.create_model()
     train.train_model(output_dir=output_dir)
