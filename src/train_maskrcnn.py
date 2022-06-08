@@ -1,4 +1,5 @@
 from pathlib import Path
+from matplotlib.image import pil_to_array
 import torch
 import transforms as T
 from torchvision.ops import misc as misc_nn_ops
@@ -10,8 +11,8 @@ import train_utils as utils
 
 
 class Train_MaskRCNN:
-    def __init__(self):
-        self.coco_root = Path(__file__).parent.absolute().parent.parent / "data/coco"
+    def __init__(self, coco_path: Path):
+        self.coco_root = coco_path
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def create_model(self):
@@ -63,7 +64,7 @@ class Train_MaskRCNN:
 
         return trg_dataloader, val_dataloader
 
-    def train_model(self):
+    def train_model(self, output_dir: Path):
         trg_dataloader, val_dataloader = self._get_dataloader()
         model = self.create_model()
         model.to(self.device)
@@ -80,10 +81,23 @@ class Train_MaskRCNN:
                 model, optimizer, trg_dataloader, self.device, epoch, print_freq=10
             )
             lr_scheduler.step()
+            utils.save_on_master(
+                {
+                    "model": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "lr_scheduler": lr_scheduler.state_dict(),
+                    "epoch": epoch,
+                },
+                output_dir / "model_{}.pth".format(epoch),
+            )
+
             evaluate(model, val_dataloader, self.device)
 
 
 if __name__ == "__main__":
-    train = Train_MaskRCNN()
+    root = Path(__file__).parent.absolute().parent
+    coco_path = root / "data/coco"
+    output_dir = root / "data/output"
+    train = Train_MaskRCNN(coco_path=coco_path)
     train.create_model()
-    train.train_model()
+    train.train_model(output_dir=output_dir)
